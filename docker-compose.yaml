@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./guestbook-backend
+    container_name: guestbook-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - JAVA_OPTS=
+    volumes:
+      # utrwalenie uploadów lokalnie
+      - ./backend/uploads:/app/uploads
+    # logi w pliku hosta
+    # - ./backend/logs:/app/logs
+
+  frontend:
+    build:
+      context: ./guestbook-frontend
+      args:
+        # ten adres zostanie wstrzyknięty do buildu Vite (import.meta.env.VITE_API_URL)
+        VITE_API_URL: ""
+    container_name: guestbook-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
