@@ -1,1 +1,3 @@
-aws-credentials.env
+/infrastructure/terraform.tfvars
+.aws/config
+.aws/credentials
