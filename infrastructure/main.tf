@@ -4,6 +4,31 @@ provider "aws" {
   region = var.aws_region
 }
 
+# ==== Cognito User Pool & Client ====
+resource "aws_cognito_user_pool" "guestbook_users" {
+  name = "guestbook-user-pool"
+  auto_verified_attributes = ["email"]
+  username_attributes = ["email"]
+  password_policy {
+    minimum_length = 8
+    require_lowercase = false
+    require_uppercase = false
+    require_numbers = true
+    require_symbols = false
+  }
+}
+resource "aws_cognito_user_pool_client" "guestbook_client" {
+  name = "guestbook-client"
+  user_pool_id = aws_cognito_user_pool.guestbook_users.id
+  explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH"
+  ]
+  generate_secret = false
+}
+
+
 # ===== ECR repository for backend image =====
 resource "aws_ecr_repository" "backend_repo" {
   name = "guestbook-backend"
@@ -157,18 +182,28 @@ resource "aws_ecs_task_definition" "backend_task" {
 
   container_definitions = jsonencode([
     {
-      name      = "guestbook-backend"
-      image     = aws_ecr_repository.backend_repo.repository_url
-      essential = true
-      portMappings = [{ containerPort = 8080, protocol = "tcp" }]
+      name = "guestbook-backend",
+      image = aws_ecr_repository.backend_repo.repository_url,
+      essential = true,
+      portMappings = [{ containerPort = 8080, protocol = "tcp" }],
       logConfiguration = {
         logDriver = "awslogs",
         options = {
-          awslogs-group         = aws_cloudwatch_log_group.guestbook_logs.name,
-          awslogs-region        = var.aws_region,
+          awslogs-group = aws_cloudwatch_log_group.guestbook_logs.name,
+          awslogs-region = var.aws_region,
           awslogs-stream-prefix = "ecs"
         }
-      }
+      },
+      environment = [
+        {
+          name = "COGNITO_ISSUER_URI",
+          value = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.guestbook_users.id}"
+        },
+        {
+          name = "MEDIA_BUCKET",
+          value = aws_s3_bucket.media_bucket.bucket
+        }
+      ]
     }
   ])
 }
@@ -205,6 +240,25 @@ output "media_bucket_name" {
 output "log_group_name" {
   value = aws_cloudwatch_log_group.guestbook_logs.name
 }
+
+output "cognito_user_pool_id" {
+  value = aws_cognito_user_pool.guestbook_users.id
+}
+
+output "cognito_user_pool_client_id" {
+  value = aws_cognito_user_pool_client.guestbook_client.id
+}
+
+
+output "cognito_region" {
+  value = var.aws_region
+}
+
+# dla backendu
+output "cognito_issuer_uri" {
+  value = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.guestbook_users.id}"
+}
+
 
 # ==== VARIABLES ====
 variable "aws_region" {
