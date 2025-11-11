@@ -10,13 +10,14 @@ resource "aws_cognito_user_pool" "guestbook_users" {
   auto_verified_attributes = ["email"]
   username_attributes = ["email"]
   password_policy {
-    minimum_length = 8
+    minimum_length = 6
     require_lowercase = false
     require_uppercase = false
-    require_numbers = true
+    require_numbers = false
     require_symbols = false
   }
 }
+
 resource "aws_cognito_user_pool_client" "guestbook_client" {
   name = "guestbook-client"
   user_pool_id = aws_cognito_user_pool.guestbook_users.id
@@ -33,6 +34,12 @@ resource "aws_cognito_user_pool_client" "guestbook_client" {
 resource "aws_ecr_repository" "backend_repo" {
   name = "guestbook-backend"
 }
+
+# ===== ECR repository for frontend image =====
+resource "aws_ecr_repository" "frontend_repo" {
+  name = "guestbook-frontend"
+}
+
 
 # ===== IAM role (reused from Learner Lab) =====
 # No creation — use provided LabRole instead
@@ -140,6 +147,17 @@ resource "aws_security_group" "ecs_service_sg" {
   }
 }
 
+resource "aws_security_group_rule" "allow_frontend_from_alb" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.ecs_service_sg.id
+  source_security_group_id = aws_security_group.alb_sg.id
+}
+
+
+
 # ===== ALB =====
 resource "aws_lb" "guestbook_alb" {
   name               = "guestbook-alb"
@@ -161,17 +179,48 @@ resource "aws_lb_target_group" "guestbook_tg" {
   }
 }
 
+resource "aws_lb_target_group" "frontend_tg" {
+  name        = "frontend-tg"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = aws_vpc.main.id
+
+  health_check {
+    path     = "/"
+    matcher  = "200-399"
+  }
+}
+
 resource "aws_lb_listener" "frontend_http" {
   load_balancer_arn = aws_lb.guestbook_alb.arn
   port              = 80
   protocol          = "HTTP"
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.guestbook_tg.arn
+    target_group_arn = aws_lb_target_group.frontend_tg.arn
   }
 }
 
-# ===== Task Definition =====
+resource "aws_lb_listener_rule" "api_backend_rule" {
+  listener_arn = aws_lb_listener.frontend_http.arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.guestbook_tg.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
+  }
+}
+
+
+
+# ===== Task Definition - backend =====
 resource "aws_ecs_task_definition" "backend_task" {
   family                   = "guestbook-backend-task"
   network_mode             = "awsvpc"
@@ -207,6 +256,66 @@ resource "aws_ecs_task_definition" "backend_task" {
     }
   ])
 }
+
+# ===== Task Definition - frontend =====
+resource "aws_ecs_task_definition" "frontend_task" {
+  family                   = "guestbook-frontend-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = var.task_execution_role_arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "guestbook-frontend",
+      image     = "${aws_ecr_repository.frontend_repo.repository_url}:latest",
+      essential = true,
+      portMappings = [{
+        containerPort = 80,
+        protocol      = "tcp"
+        hostPort      = 80
+      }],
+      environment = [
+        {
+          name  = "BACKEND_URL"
+          value = "http://${aws_lb.guestbook_alb.dns_name}:8080"
+        }
+      ],
+      logConfiguration = {
+        logDriver = "awslogs",
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.guestbook_logs.name,
+          awslogs-region        = var.aws_region,
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
+}
+
+resource "aws_ecs_service" "frontend_service" {
+  name            = "guestbook-frontend-service"
+  cluster         = aws_ecs_cluster.guestbook_cluster.id
+  launch_type     = "FARGATE"
+  task_definition = aws_ecs_task_definition.frontend_task.arn
+  desired_count   = 1
+
+  network_configuration {
+    subnets         = aws_subnet.public[*].id
+    security_groups = [aws_security_group.ecs_service_sg.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.frontend_tg.arn
+    container_name   = "guestbook-frontend"
+    container_port   = 80
+  }
+
+  depends_on = [aws_lb_listener.frontend_http]
+}
+
 
 # ===== ECS Service =====
 resource "aws_ecs_service" "backend_service" {
@@ -249,7 +358,6 @@ output "cognito_user_pool_client_id" {
   value = aws_cognito_user_pool_client.guestbook_client.id
 }
 
-
 output "cognito_region" {
   value = var.aws_region
 }
@@ -257,6 +365,26 @@ output "cognito_region" {
 # dla backendu
 output "cognito_issuer_uri" {
   value = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.guestbook_users.id}"
+}
+
+output "frontend_url" {
+  value = "http://${aws_lb.guestbook_alb.dns_name}/"
+}
+
+output "backend_url" {
+  value       = "http://${aws_lb.guestbook_alb.dns_name}/api"
+}
+
+
+
+
+
+# lokalna zmienna dla frontendu
+locals {
+  vite_env = {
+    VITE_COGNITO_CLIENT_ID = aws_cognito_user_pool_client.guestbook_client.id
+    VITE_AWS_REGION        = var.aws_region
+  }
 }
 
 
@@ -275,4 +403,38 @@ variable "media_bucket_name" {
 variable "task_execution_role_arn" {
   type        = string
   description = "ARN of IAM role with ecsTaskExecution permissions"
+}
+
+
+
+resource "null_resource" "build_backend_image" {
+  provisioner "local-exec" {
+    command = "build-backend.bat"
+    environment = {
+      AWS_REGION = var.aws_region
+      ECR_URL    = aws_ecr_repository.backend_repo.repository_url
+    }
+  }
+
+  triggers = {
+    always_run = timestamp()
+  }
+}
+
+resource "null_resource" "build_frontend_image" {
+  provisioner "local-exec" {
+    command = "build-frontend.bat"
+    environment = {
+      AWS_REGION             = var.aws_region
+      ECR_URL                = aws_ecr_repository.frontend_repo.repository_url
+      VITE_COGNITO_USER_POOL_ID = aws_cognito_user_pool.guestbook_users.id
+      VITE_COGNITO_CLIENT_ID = aws_cognito_user_pool_client.guestbook_client.id
+      VITE_FRONTEND_URL      = "http://${aws_lb.guestbook_alb.dns_name}/api"
+    }
+    interpreter = ["cmd", "/C"]
+  }
+
+  triggers = {
+    always_run = timestamp()
+  }
 }
