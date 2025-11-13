@@ -16,12 +16,16 @@ resource "aws_cognito_user_pool" "guestbook_users" {
     require_numbers = false
     require_symbols = false
   }
+  # lambda_config {
+  #   pre_sign_up = aws_lambda_function.auto_confirm.arn
+  # }
 }
 
 resource "aws_cognito_user_pool_client" "guestbook_client" {
   name = "guestbook-client"
   user_pool_id = aws_cognito_user_pool.guestbook_users.id
   explicit_auth_flows = [
+    "ALLOW_USER_SRP_AUTH",
     "ALLOW_USER_PASSWORD_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
     "ALLOW_ADMIN_USER_PASSWORD_AUTH"
@@ -438,3 +442,43 @@ resource "null_resource" "build_frontend_image" {
     always_run = timestamp()
   }
 }
+#
+# # Do automatycznego potwierdzania uzytkownika
+# resource "aws_lambda_function" "auto_confirm" {
+#   function_name = "auto_confirm_user"
+#
+#   runtime = "nodejs18.x"
+#   handler = "index.handler"
+#   role    = aws_iam_role.lambda_exec.arn
+#
+#   filename         = "${path.module}/lambda/auto-confirm.zip"
+#   source_code_hash = filebase64sha256("${path.module}/lambda/auto-confirm.zip")
+# }
+#
+# resource "aws_iam_role" "lambda_exec" {
+#   name = "lambda_exec_role"
+#
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [{
+#       Action = "sts:AssumeRole"
+#       Effect = "Allow"
+#       Principal = {
+#         Service = "lambda.amazonaws.com"
+#       }
+#     }]
+#   })
+# }
+#
+# resource "aws_iam_role_policy_attachment" "lambda_basic" {
+#   role       = aws_iam_role.lambda_exec.name
+#   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+# }
+#
+# resource "aws_lambda_permission" "allow_cognito" {
+#   statement_id  = "AllowExecutionFromCognito"
+#   action        = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.auto_confirm.function_name
+#   principal     = "cognito-idp.amazonaws.com"
+#   source_arn    = aws_cognito_user_pool.guestbook_users.arn
+# }

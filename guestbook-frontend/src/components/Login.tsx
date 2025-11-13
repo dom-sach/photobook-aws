@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { signIn, signUp} from "../auth.ts";
+import ConfirmSignup from "./ConfirmSignup.tsx";
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
   const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
@@ -32,18 +34,26 @@ export default function Login() {
     }
   };
 
+  if (showConfirm) {
+    return <ConfirmSignup />;
+  }
   return (
     <div>
-      <h3>Debug:</h3>
-      <p>{import.meta.env.VITE_COGNITO_USER_POOL_ID}</p>
-      <p>{import.meta.env.VITE_COGNITO_CLIENT_ID}</p>
-
-
       <h2>Logowanie / Rejestracja</h2>
       <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email"/>
       <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Hasło"/>
       <button onClick={handleLogin}>Zaloguj</button>
       <button onClick={handleSignup}>Zarejestruj</button>
+
+      <p>Nie potwierdziłeś konta?{" "}
+        <button onClick={() => setShowConfirm(true)}>
+          Potwierdź rejestrację
+        </button>
+      </p>
+
+      <h3>Debug:</h3>
+      <p>{import.meta.env.VITE_COGNITO_USER_POOL_ID}</p>
+      <p>{import.meta.env.VITE_COGNITO_CLIENT_ID}</p>
     </div>
   );
 }

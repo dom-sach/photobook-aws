@@ -16,7 +16,7 @@ if (!poolData.UserPoolId || !poolData.ClientId) {
 }
 
 
-const userPool = new CognitoUserPool(poolData);
+export const userPool = new CognitoUserPool(poolData);
 
 export function signUp(email: string, password: string) {
   return new Promise((resolve, reject) => {
