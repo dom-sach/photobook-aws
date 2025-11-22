@@ -1,0 +1,100 @@
+/* Cała strona — wycentrowanie kontenera */
+.login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #f5f7fa;
+    font-family: sans-serif;
+}
+
+/* Główny kontener formularza */
+.login-container {
+    background: white;
+    padding: 40px 50px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 420px;
+}
+
+/* Nagłówek */
+.login-container h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 26px;
+    color: #333;
+}
+
+/* Label */
+.login-container label {
+    display: block;
+    margin-bottom: 6px;
+    color: #444;
+    font-weight: 500;
+}
+
+/* Pola input */
+.login-container input[type="email"],
+.login-container input[type="password"],
+.login-container input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 15px;
+    transition: border-color 0.2s ease;
+}
+
+.login-container input:focus {
+    border-color: #ff0a92;
+    outline: none;
+}
+
+/* Duże przyciski */
+.login-container button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    border-radius: 8px;
+    background: #a90041;
+    color: white;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.login-container button:hover {
+    background: #91033a;
+}
+
+/* Drugorzędny przycisk */
+.login-container button.secondary {
+    background: #555;
+}
+
+.login-container button.secondary:hover {
+    background: #333;
+}
+
+/* Notka pod spodem */
+.login-container p {
+    text-align: center;
+    margin-top: 14px;
+}
+
+/* Link-Button w tekście */
+.login-container p button {
+    width: auto;
+    padding: 6px 12px;
+    background: transparent;
+    color: #a90041;
+    text-decoration: underline;
+}
+
+.login-container p button:hover {
+    color: #91033a;
+    background: none;
+}

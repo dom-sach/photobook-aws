@@ -48,6 +48,9 @@ resource "aws_ecr_repository" "frontend_repo" {
 # ===== IAM role (reused from Learner Lab) =====
 # No creation — use provided LabRole instead
 
+
+
+
 # ===== Log group for ECS logs =====
 resource "aws_cloudwatch_log_group" "guestbook_logs" {
   name              = "/ecs/guestbook"
@@ -69,6 +72,53 @@ resource "aws_s3_bucket_public_access_block" "media_bucket_block" {
   restrict_public_buckets = false
 }
 
+resource "aws_s3_bucket_cors_configuration" "media_bucket_cors" {
+  bucket = aws_s3_bucket.media_bucket.id
+
+  cors_rule {
+    allowed_methods = ["GET"]
+    allowed_origins = ["*"]
+    allowed_headers = ["*"]
+    max_age_seconds = 3000
+  }
+}
+
+
+# policy dla bucketa
+resource "aws_s3_bucket_policy" "media_bucket_policy" {
+  bucket = aws_s3_bucket.media_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.media_bucket.arn}/*"
+      }
+    ]
+  })
+}
+
+
+# === AWS RDS PostgreSQL ====
+resource "aws_db_instance" "guestbook_db" {
+  identifier           = "guestbook-db"
+  engine               = "postgres"
+  instance_class       = "db.t3.micro"
+  allocated_storage    = 20
+  username             = "backend"
+  password             = "password"
+  db_name              = "guestbook"
+  publicly_accessible  = true
+  skip_final_snapshot  = true
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.guestbook_db_subnets.name
+}
+
+
 # ===== VPC and networking =====
 data "aws_availability_zones" "available" {}
 
@@ -85,6 +135,17 @@ resource "aws_subnet" "public" {
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
 }
+# DB subnet group (dla RDS)
+resource "aws_db_subnet_group" "guestbook_db_subnets" {
+  name        = "guestbook-db-subnet-group"
+  description = "Subnet group for guestbook RDS PostgreSQL"
+  subnet_ids  = aws_subnet.public[*].id
+
+  tags = {
+    Name = "guestbook-db-subnet-group"
+  }
+}
+
 
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
@@ -161,6 +222,28 @@ resource "aws_security_group_rule" "allow_frontend_from_alb" {
 }
 
 
+# DB security group
+resource "aws_security_group" "rds_sg" {
+  name   = "guestbook-rds-sg"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_service_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+
 
 # ===== ALB =====
 resource "aws_lb" "guestbook_alb" {
@@ -178,8 +261,7 @@ resource "aws_lb_target_group" "guestbook_tg" {
   target_type = "ip"
   vpc_id      = aws_vpc.main.id
   health_check {
-    path = "/api/messages"
-    matcher = "200"
+    path = "/health"
   }
 }
 
@@ -191,8 +273,7 @@ resource "aws_lb_target_group" "frontend_tg" {
   vpc_id      = aws_vpc.main.id
 
   health_check {
-    path     = "/"
-    matcher  = "200-399"
+    path     = "/health"
   }
 }
 
@@ -232,6 +313,7 @@ resource "aws_ecs_task_definition" "backend_task" {
   cpu                      = 256
   memory                   = 512
   execution_role_arn       = var.task_execution_role_arn
+  task_role_arn = var.task_execution_role_arn
 
   container_definitions = jsonencode([
     {
@@ -255,6 +337,18 @@ resource "aws_ecs_task_definition" "backend_task" {
         {
           name = "MEDIA_BUCKET",
           value = aws_s3_bucket.media_bucket.bucket
+        },
+        {
+          name  = "DB_HOST"
+          value = aws_db_instance.guestbook_db.address
+        },
+        {
+          name  = "DB_USER"
+          value = "backend"
+        },
+        {
+          name  = "DB_PASS"
+          value = aws_db_instance.guestbook_db.password
         }
       ]
     }
@@ -341,6 +435,7 @@ resource "aws_ecs_service" "backend_service" {
   depends_on = [aws_lb_listener.frontend_http]
 }
 
+
 # ==== OUTPUTS ====
 output "alb_dns_name" {
   value = aws_lb.guestbook_alb.dns_name
@@ -378,7 +473,6 @@ output "frontend_url" {
 output "backend_url" {
   value       = "http://${aws_lb.guestbook_alb.dns_name}/api"
 }
-
 
 
 
@@ -433,7 +527,7 @@ resource "null_resource" "build_frontend_image" {
       ECR_URL                = aws_ecr_repository.frontend_repo.repository_url
       VITE_COGNITO_USER_POOL_ID = aws_cognito_user_pool.guestbook_users.id
       VITE_COGNITO_CLIENT_ID = aws_cognito_user_pool_client.guestbook_client.id
-      VITE_FRONTEND_URL      = "http://${aws_lb.guestbook_alb.dns_name}/api"
+      VITE_BACKEND_URL = "http://${aws_lb.guestbook_alb.dns_name}"
     }
     interpreter = ["cmd", "/C"]
   }
@@ -442,43 +536,15 @@ resource "null_resource" "build_frontend_image" {
     always_run = timestamp()
   }
 }
-#
-# # Do automatycznego potwierdzania uzytkownika
+
+
+# # ===== LAMBDA do automatycznego potwierdzania uzytkownia ======
 # resource "aws_lambda_function" "auto_confirm" {
-#   function_name = "auto_confirm_user"
+#   function_name = "guestbook_auto_confirm"
+#   role          = var.lab_role_arn
+#   handler       = "index.handler"
+#   runtime       = "python3.12"
 #
-#   runtime = "nodejs18.x"
-#   handler = "index.handler"
-#   role    = aws_iam_role.lambda_exec.arn
-#
-#   filename         = "${path.module}/lambda/auto-confirm.zip"
-#   source_code_hash = filebase64sha256("${path.module}/lambda/auto-confirm.zip")
-# }
-#
-# resource "aws_iam_role" "lambda_exec" {
-#   name = "lambda_exec_role"
-#
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [{
-#       Action = "sts:AssumeRole"
-#       Effect = "Allow"
-#       Principal = {
-#         Service = "lambda.amazonaws.com"
-#       }
-#     }]
-#   })
-# }
-#
-# resource "aws_iam_role_policy_attachment" "lambda_basic" {
-#   role       = aws_iam_role.lambda_exec.name
-#   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-# }
-#
-# resource "aws_lambda_permission" "allow_cognito" {
-#   statement_id  = "AllowExecutionFromCognito"
-#   action        = "lambda:InvokeFunction"
-#   function_name = aws_lambda_function.auto_confirm.function_name
-#   principal     = "cognito-idp.amazonaws.com"
-#   source_arn    = aws_cognito_user_pool.guestbook_users.arn
+#   filename         = "lambda/auto_confirm.zip"
+#   source_code_hash = filebase64sha256("lambda/auto_confirm.zip")
 # }

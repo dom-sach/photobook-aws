@@ -3,17 +3,17 @@
 echo Wrzucam Cognito user pools na frontend...
 echo CLIENT_ID=%VITE_COGNITO_CLIENT_ID%
 echo USER_POOL_ID=%VITE_COGNITO_USER_POOL_ID%
-echo BACKEND_URL=%BACKEND_URL%
+echo VITE_BACKEND_URL=%VITE_BACKEND_URL%
 
-
+cd ..\guestbook-frontend
 echo Budowanie obrazu frontendu...
 docker build ^
   --build-arg VITE_COGNITO_CLIENT_ID=%VITE_COGNITO_CLIENT_ID% ^
   --build-arg VITE_COGNITO_USER_POOL_ID=%VITE_COGNITO_USER_POOL_ID% ^
   --build-arg VITE_FRONTEND_URL=%VITE_FRONTEND_URL% ^
   --build-arg VITE_AWS_REGION=%AWS_REGION% ^
-  --build-arg BACKEND_URL=%BACKEND_URL% ^
-  -t guestbook-frontend ..\guestbook-frontend
+  --build-arg VITE_BACKEND_URL=%VITE_BACKEND_URL% ^
+  -t guestbook-frontend .
 
 
 echo Logowanie do ECR...

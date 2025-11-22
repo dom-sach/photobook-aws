@@ -1,11 +1,13 @@
 import { CognitoUser } from "amazon-cognito-identity-js";
-import { useState } from "react";
+import React, { useState } from "react";
 import {userPool} from "../auth.ts";
+import {useNavigate} from "react-router-dom";
 
 const ConfirmSignup = () => {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [status, setStatus] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +23,7 @@ const ConfirmSignup = () => {
         setStatus("❌ Błąd: " + err.message);
       } else {
         setStatus("✅ Konto potwierdzone. Możesz się teraz zalogować.");
+        navigate('/');
       }
     });
   };
