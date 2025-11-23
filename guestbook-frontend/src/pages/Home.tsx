@@ -2,24 +2,22 @@ import { useEffect, useState } from 'react';
 import {useAuth} from "../contexts/AuthContext.tsx";
 import {useNavigate} from "react-router-dom";
 import {logout as cognitoLogout} from "../auth.ts";
-
-interface ImageItem {
-  id: string;
-  url: string;
-  caption: string;
-  uploadTime: string;
-}
+import ImageGrid from "../components/ImageGrid.tsx";
 
 export default function Home() {
+
+  // Constants
+  const [showUpload, setShowUpload] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [caption, setCaption] = useState('');
   const { isLoggedIn, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Logowanie
   const API = import.meta.env.VITE_BACKEND_URL;
-  console.log("========== Frontend =============");
-  console.log("API =", API);
+  console.log("[Home] Logging backend URL = ", API);
 
-
-  // Home dostępny dopiero po zalogowaniu
+  // Dostęp dopiero po zalogowaniu
   useEffect(() => {
     if (!isLoggedIn) {
       navigate("/login");
@@ -27,40 +25,19 @@ export default function Home() {
   }, [isLoggedIn]);
 
 
-  const [images, setImages] = useState<ImageItem[]>([]);
-  const [showUpload, setShowUpload] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [caption, setCaption] = useState('');
-
-  useEffect(() => {
-    const token = localStorage.getItem('id_token');
-
-    // pobierz listę obrazków z backendu
-    fetch(`${API}/api/images`, {
-      headers: {
-        'Authorization': token ? `Bearer ${token}` : '',
-      },
-    })
-      .then(res => res.json())
-      .then(data => setImages(data))
-      .catch(err => console.error('Błąd pobierania obrazków:', err));
-  }, []);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
     }
   };
 
+  // Upload obrazka
   const handleUpload = async () => {
     if (!file) return;
-
     const formData = new FormData();
-    formData.append('file', file);      // <-- poprawione
+    formData.append('file', file);
     formData.append('caption', caption);
-
     const token = localStorage.getItem('id_token');
-
     await fetch(`${API}/api/images`, {
       method: 'POST',
       body: formData,
@@ -68,30 +45,23 @@ export default function Home() {
         'Authorization': token ? `Bearer ${token}` : '',
       },
     });
-
-    // odśwież listę po uploadzie
-    const res = await fetch(`${API}/api/images`, {
-      headers: {
-        'Authorization': token ? `Bearer ${token}` : '',
-      },
-    });
-    const data = await res.json();
-    setImages(data);
     setShowUpload(false);
     setFile(null);
     setCaption('');
   };
 
+  // Logout
   const handleLogout = () => {
     cognitoLogout();   // usuwa sesję Cognito
     logout();          // ustawia isLoggedIn = false w kontekście
     localStorage.removeItem("id_token");
-    navigate("/login"); // redirect
+    navigate("/login");
   };
+
 
   return (
     <div>
-
+      {/* Przyciski */}
       <button style={{
         display: 'flex',
         margin: 'auto',
@@ -112,6 +82,21 @@ export default function Home() {
         Wyloguj
       </button>
 
+      <button
+        style={{
+          display: 'flex',
+          margin: 'auto',
+          marginBottom: '2rem',
+          marginTop: '2rem',
+          fontSize: '1.2rem',
+        }}
+        onClick={() => navigate("/profile")}
+      >
+        Mój Profil
+      </button>
+
+
+      {/* Dodawanie nowego obrazka */}
       {showUpload && (
         <div style={{
           width: '80%',
@@ -165,32 +150,13 @@ export default function Home() {
 
         </div>
       )}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '10px',
-        maxWidth: '80%',
-        alignContent: 'center',
-        justifyContent: 'center',
-        margin: 'auto',
-      }}>
-        {images.map((img) => (
-          <div key={img.id} style={{border: '1px solid #ccc', padding: '10px'}}>
-            <img src={img.url} alt={img.caption} style={{width: '100%'}}/>
-            <h4 style={{
-              margin: '0',
-              marginTop: '1rem',
-              marginBottom: '0.5rem',
-            }}>
-              {img.caption}
-            </h4>
 
-            <small>
-              {new Date(img.uploadTime).toLocaleDateString()}
-            </small>
-          </div>
-        ))}
+      {/* Lista wszystkich obrazków */}
+      <div style={{marginTop: "2rem"}}>
+        <ImageGrid/>
       </div>
+
+
     </div>
   );
 }

@@ -25,13 +25,9 @@ RUN npm run build
 
 # --- runtime stage ---
 FROM nginx:alpine
-
 # kopiujemy szablon konfiguracyjny
 COPY nginx.template.conf /etc/nginx/templates/nginx.template.conf
-
 # kopiujemy frontend
 COPY --from=build /app/dist /usr/share/nginx/html
-
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]

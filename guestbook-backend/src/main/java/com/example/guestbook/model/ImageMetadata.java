@@ -4,9 +4,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 
+@Setter
+@Getter
 @Entity
 public class ImageMetadata {
     @Id
@@ -20,36 +24,4 @@ public class ImageMetadata {
     private String uploaderEmail;
 
     private Instant uploadTime;
-
-    // gettery settery
-    public Long getId() {
-        return id;
-    }
-    public void setId(Long id) {
-        this.id = id;
-    }
-    public String getFilename() {
-        return filename;
-    }
-    public void setFilename(String filename) {
-        this.filename = filename;
-    }
-    public String getCaption() {
-        return caption;
-    }
-    public void setCaption(String caption) {
-        this.caption = caption;
-    }
-    public String getUploaderEmail() {
-        return uploaderEmail;
-    }
-    public void setUploaderEmail(String uploaderEmail) {
-        this.uploaderEmail = uploaderEmail;
-    }
-    public Instant getUploadTime() {
-        return uploadTime;
-    }
-    public void setUploadTime(Instant uploadTime) {
-        this.uploadTime = uploadTime;
-    }
 }

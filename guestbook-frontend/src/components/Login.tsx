@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { signIn, signUp} from "../auth.ts";
-import ConfirmSignup from "./ConfirmSignup.tsx";
+import ConfirmSignup from "../pages/ConfirmSignup.tsx";
 import { useNavigate } from 'react-router-dom';
 import {useAuth} from "../contexts/AuthContext.tsx";
 import "./Login.css";

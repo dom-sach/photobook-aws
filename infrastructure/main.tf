@@ -296,6 +296,7 @@ resource "aws_lb_listener" "frontend_http" {
   }
 }
 
+# Podpunkt 2 - Load Balancer - wspólny dla frontendu i backendu, rozdziela ruch
 resource "aws_lb_listener_rule" "api_backend_rule" {
   listener_arn = aws_lb_listener.frontend_http.arn
   priority     = 100
@@ -401,6 +402,8 @@ resource "aws_ecs_task_definition" "frontend_task" {
   ])
 }
 
+
+# Podpunkt 2 - Definicja konteneru frontendu
 resource "aws_ecs_service" "frontend_service" {
   name            = "guestbook-frontend-service"
   cluster         = aws_ecs_cluster.guestbook_cluster.id
@@ -423,8 +426,7 @@ resource "aws_ecs_service" "frontend_service" {
   depends_on = [aws_lb_listener.frontend_http]
 }
 
-
-# ===== ECS Service =====
+# Podpunkt 2 - Definicja kontenera backendu
 resource "aws_ecs_service" "backend_service" {
   name            = "guestbook-backend-service"
   cluster         = aws_ecs_cluster.guestbook_cluster.id

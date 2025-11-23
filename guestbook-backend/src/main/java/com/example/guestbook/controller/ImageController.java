@@ -22,10 +22,7 @@ public class ImageController {
     private final ImageService imageService;
     private final ImageMetadataRepository repo;
 
-    /**
-     * Endpoint do uploadu obrazka z podpisem.
-     * Użytkownik musi być zalogowany - Principal zawiera email.
-     */
+    // upload nowego obrazka
     @PostMapping
     public ResponseEntity<?> uploadImage(@RequestPart("file") MultipartFile file,
                                          @RequestPart("caption") String caption,
@@ -46,10 +43,7 @@ public class ImageController {
         }
     }
 
-    /**
-     * Endpoint do pobrania listy obrazków.
-     * Zwraca listę metadanych z URL.
-     */
+    // zwraca listę wszystkich obrazków (metadanych)
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> listImages() {
         List<ImageMetadata> images = repo.findAllByOrderByUploadTimeDesc();
@@ -65,9 +59,7 @@ public class ImageController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Endpoint do pobrania obrazka po filename.
-     */
+    // pobieranie obrazka po filename
     @GetMapping("/{filename}")
     public ResponseEntity<?> getImage(@PathVariable String filename) {
         try {
