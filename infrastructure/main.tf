@@ -16,10 +16,19 @@ resource "aws_cognito_user_pool" "guestbook_users" {
     require_numbers = false
     require_symbols = false
   }
-  # lambda_config {
-  #   pre_sign_up = aws_lambda_function.auto_confirm.arn
-  # }
+  lambda_config {
+    pre_sign_up = aws_lambda_function.auto_confirm.arn
+  }
 }
+
+resource "aws_lambda_permission" "allow_cognito" {
+  statement_id  = "AllowExecutionFromCognito"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.auto_confirm.function_name
+  principal     = "cognito-idp.amazonaws.com"
+  source_arn    = aws_cognito_user_pool.guestbook_users.arn
+}
+
 
 resource "aws_cognito_user_pool_client" "guestbook_client" {
   name = "guestbook-client"
@@ -538,13 +547,13 @@ resource "null_resource" "build_frontend_image" {
 }
 
 
-# # ===== LAMBDA do automatycznego potwierdzania uzytkownia ======
-# resource "aws_lambda_function" "auto_confirm" {
-#   function_name = "guestbook_auto_confirm"
-#   role          = var.lab_role_arn
-#   handler       = "index.handler"
-#   runtime       = "python3.12"
-#
-#   filename         = "lambda/auto_confirm.zip"
-#   source_code_hash = filebase64sha256("lambda/auto_confirm.zip")
-# }
+# ===== LAMBDA do automatycznego potwierdzania uzytkownia ======
+resource "aws_lambda_function" "auto_confirm" {
+  function_name = "guestbook_auto_confirm"
+  role          = var.lab_role_arn
+  handler       = "index.handler"
+  runtime       = "python3.12"
+
+  filename         = "lambda/auto_confirm.zip"
+  source_code_hash = filebase64sha256("lambda/auto_confirm.zip")
+}

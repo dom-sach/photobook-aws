@@ -48,3 +48,10 @@ export function signIn(email: string, password: string): Promise<string> {
     });
   });
 }
+
+export function logout() {
+  const user = userPool.getCurrentUser();
+  if (user) {
+    user.signOut();
+  }
+}

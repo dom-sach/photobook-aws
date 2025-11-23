@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import {useAuth} from "../contexts/AuthContext.tsx";
 import "./Login.css";
 
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +33,7 @@ export default function Login() {
     }
   };
 
+
   const handleSignup = async () => {
     try {
       await signUp(email, password);
@@ -46,9 +48,20 @@ export default function Login() {
     return <ConfirmSignup />;
   }
   return (
-    <div>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      width: '100%',
+      justifyContent: 'center',
+      alignContent: 'center',
+      alignItems: 'center',
+    }}>
       {!isLoggedIn ? (
-        <div className="login-container">
+        <div className="login-container" style={{
+          margin: 'auto',
+          width: '80%',
+          alignContent: 'center',
+        }}>
           <h2>Logowanie / Rejestracja</h2>
 
           <label htmlFor="email">Email</label>
@@ -60,6 +73,17 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            style={{
+              padding: '0',
+              margin: 'auto',
+              marginBottom: '1rem',
+              marginTop: '1rem',
+              paddingTop: '1rem',
+              paddingBottom: '1rem',
+              fontSize: '1.1rem',
+              width: '100%',
+              borderRadius: '10px',
+            }}
           />
 
           <label htmlFor="password">Hasło</label>
@@ -70,14 +94,28 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            style={{
+              padding: '0',
+              margin: 'auto',
+              marginBottom: '1rem',
+              marginTop: '1rem',
+              paddingTop: '1rem',
+              paddingBottom: '1rem',
+              fontSize: '1.1rem',
+              width: '100%',
+              borderRadius: '10px',
+            }}
           />
 
           <button onClick={handleLogin}>Zaloguj</button>
           <button onClick={handleSignup}>Zarejestruj</button>
 
-          <p>Nie potwierdziłeś konta?{" "}
+          <p style={{
+            marginTop: '2rem',
+            width: '100%',
+          }}>
             <button onClick={() => setShowConfirm(true)}>
-              Potwierdź rejestrację
+              Nie potwierdziłeś jeszcze konta? Potwierdź teraz.
             </button>
           </p>
 

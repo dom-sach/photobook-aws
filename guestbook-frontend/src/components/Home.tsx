@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {useAuth} from "../contexts/AuthContext.tsx";
 import {useNavigate} from "react-router-dom";
+import {logout as cognitoLogout} from "../auth.ts";
 
 interface ImageItem {
   id: string;
@@ -10,7 +11,7 @@ interface ImageItem {
 }
 
 export default function Home() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, logout } = useAuth();
   const navigate = useNavigate();
 
   const API = import.meta.env.VITE_BACKEND_URL;
@@ -81,29 +82,112 @@ export default function Home() {
     setCaption('');
   };
 
+  const handleLogout = () => {
+    cognitoLogout();   // usuwa sesję Cognito
+    logout();          // ustawia isLoggedIn = false w kontekście
+    localStorage.removeItem("id_token");
+    navigate("/login"); // redirect
+  };
+
   return (
     <div>
-      <button onClick={() => setShowUpload(true)}>Dodaj obrazek</button>
+
+      <button style={{
+        display: 'flex',
+        margin: 'auto',
+        marginBottom: '2rem',
+        marginTop: '2rem',
+        fontSize: '1.2rem',
+      }} onClick={() => setShowUpload(true)}>
+        Dodaj obrazek
+      </button>
+
+      <button style={{
+        display: 'flex',
+        margin: 'auto',
+        marginBottom: '2rem',
+        marginTop: '2rem',
+        fontSize: '1.2rem',
+      }} onClick={handleLogout}>
+        Wyloguj
+      </button>
+
       {showUpload && (
-        <div>
+        <div style={{
+          width: '80%',
+          margin: 'auto',
+          marginBottom: '2rem',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
           <h3>Dodaj obrazek</h3>
-          <input type="file" accept=".jpg,.png" onChange={handleFileChange} />
+          <input
+            type="file"
+            style={{
+              lineHeight: '2rem',
+            }}
+            accept=".jpg,.png"
+            onChange={handleFileChange}/>
+
           <input
             type="text"
+            style={{
+              lineHeight: '2rem',
+            }}
             placeholder="Podpis"
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
           />
-          <button onClick={handleUpload}>Wyślij</button>
-          <button onClick={() => setShowUpload(false)}>Anuluj</button>
+          <div style={{
+            display: 'flex',
+            width: '100%',
+            margin: 'auto',
+            flexDirection: 'row',
+            justifyContent: 'space-around',
+            alignContent: 'space-around',
+          }}>
+            <button
+              onClick={handleUpload}
+              style={{
+                width: '30%',
+              }}>
+              Wyślij
+            </button>
+
+            <button
+              onClick={() => setShowUpload(false)}
+              style={{
+                width: '30%',
+              }}>
+              Anuluj
+            </button>
+          </div>
+
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '10px',
+        maxWidth: '80%',
+        alignContent: 'center',
+        justifyContent: 'center',
+        margin: 'auto',
+      }}>
         {images.map((img) => (
           <div key={img.id} style={{border: '1px solid #ccc', padding: '10px'}}>
-            <img src={img.url} alt={img.caption} style={{width: '100%'}} />
-            <p>{img.caption}</p>
-            <small>{img.uploadTime}</small>
+            <img src={img.url} alt={img.caption} style={{width: '100%'}}/>
+            <h4 style={{
+              margin: '0',
+              marginTop: '1rem',
+              marginBottom: '0.5rem',
+            }}>
+              {img.caption}
+            </h4>
+
+            <small>
+              {new Date(img.uploadTime).toLocaleDateString()}
+            </small>
           </div>
         ))}
       </div>

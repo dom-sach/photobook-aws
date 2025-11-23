@@ -29,7 +29,15 @@ const ConfirmSignup = () => {
   };
 
   return (
-    <div>
+    <div style={{
+      margin: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      maxWidth: '80%',
+      maxHeight: '80%',
+      justifyContent: 'center',
+      alignContent: 'center',
+    }}>
       <h2>Potwierdzenie rejestracji</h2>
       <form onSubmit={handleSubmit}>
         <input
@@ -38,6 +46,10 @@ const ConfirmSignup = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          style={{
+            marginTop: '2rem',
+            marginBottom: '2rem',
+          }}
         />
         <br />
         <input
@@ -46,9 +58,21 @@ const ConfirmSignup = () => {
           value={code}
           onChange={(e) => setCode(e.target.value)}
           required
+          style={{
+            marginTop: '2rem',
+            marginBottom: '2rem',
+          }}
         />
         <br />
-        <button type="submit">Potwierdź konto</button>
+        <button
+          type="submit"
+          style={{
+            width: '100%',
+            height: '1.5rem',
+          }}
+        >
+          Potwierdź konto
+        </button>
       </form>
       <p>{status}</p>
     </div>
