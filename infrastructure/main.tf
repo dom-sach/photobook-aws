@@ -54,19 +54,14 @@ resource "aws_ecr_repository" "frontend_repo" {
 }
 
 
-# ===== IAM role (reused from Learner Lab) =====
-# No creation — use provided LabRole instead
-
-
-
-
 # ===== Log group for ECS logs =====
 resource "aws_cloudwatch_log_group" "guestbook_logs" {
   name              = "/ecs/guestbook"
   retention_in_days = 7
 }
 
-# ===== S3 bucket for media files =====
+
+# ===== S3 bucket =====
 resource "aws_s3_bucket" "media_bucket" {
   bucket = var.media_bucket_name
   force_destroy = true
@@ -81,6 +76,7 @@ resource "aws_s3_bucket_public_access_block" "media_bucket_block" {
   restrict_public_buckets = false
 }
 
+# CORS config for bucket
 resource "aws_s3_bucket_cors_configuration" "media_bucket_cors" {
   bucket = aws_s3_bucket.media_bucket.id
 
@@ -92,8 +88,7 @@ resource "aws_s3_bucket_cors_configuration" "media_bucket_cors" {
   }
 }
 
-
-# policy dla bucketa
+# Bucket policy
 resource "aws_s3_bucket_policy" "media_bucket_policy" {
   bucket = aws_s3_bucket.media_bucket.id
 
@@ -144,6 +139,7 @@ resource "aws_subnet" "public" {
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
 }
+
 # DB subnet group (dla RDS)
 resource "aws_db_subnet_group" "guestbook_db_subnets" {
   name        = "guestbook-db-subnet-group"
@@ -263,6 +259,8 @@ resource "aws_lb" "guestbook_alb" {
   subnets            = aws_subnet.public[*].id
 }
 
+
+# grupa docelowa dla backendu
 resource "aws_lb_target_group" "guestbook_tg" {
   name        = "guestbook-tg"
   port        = 8080
@@ -273,7 +271,7 @@ resource "aws_lb_target_group" "guestbook_tg" {
     path = "/health"
   }
 }
-
+# grupa docelowa dla frontendu
 resource "aws_lb_target_group" "frontend_tg" {
   name        = "frontend-tg"
   port        = 80
@@ -285,7 +283,7 @@ resource "aws_lb_target_group" "frontend_tg" {
     path     = "/health"
   }
 }
-
+# nasłuchiwanie na porcie 80 dla frontendu
 resource "aws_lb_listener" "frontend_http" {
   load_balancer_arn = aws_lb.guestbook_alb.arn
   port              = 80
@@ -295,17 +293,14 @@ resource "aws_lb_listener" "frontend_http" {
     target_group_arn = aws_lb_target_group.frontend_tg.arn
   }
 }
-
-# Podpunkt 2 - Load Balancer - wspólny dla frontendu i backendu, rozdziela ruch
+# dodatkowa zasada dla listenera (przekierowuje na backend if /api/*)
 resource "aws_lb_listener_rule" "api_backend_rule" {
   listener_arn = aws_lb_listener.frontend_http.arn
   priority     = 100
-
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.guestbook_tg.arn
   }
-
   condition {
     path_pattern {
       values = ["/api/*"]

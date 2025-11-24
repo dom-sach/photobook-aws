@@ -61,39 +61,48 @@ export default function Home() {
 
   return (
     <div>
-      {/* Przyciski */}
-      <button style={{
+      <div style={{
         display: 'flex',
+        flexDirection: 'row',
         margin: 'auto',
-        marginBottom: '2rem',
-        marginTop: '2rem',
-        fontSize: '1.2rem',
-      }} onClick={() => setShowUpload(true)}>
-        Dodaj obrazek
-      </button>
-
-      <button style={{
-        display: 'flex',
-        margin: 'auto',
-        marginBottom: '2rem',
-        marginTop: '2rem',
-        fontSize: '1.2rem',
-      }} onClick={handleLogout}>
-        Wyloguj
-      </button>
-
-      <button
-        style={{
+        width: '80%',
+        justifyContent: 'center'
+      }} >
+        {/* Przyciski */}
+        <button style={{
           display: 'flex',
           margin: 'auto',
           marginBottom: '2rem',
           marginTop: '2rem',
-          fontSize: '1.2rem',
-        }}
-        onClick={() => navigate("/profile")}
-      >
-        Mój Profil
-      </button>
+          fontSize: '1rem',
+        }} onClick={() => setShowUpload(true)}>
+          Dodaj obrazek
+        </button>
+
+        <button style={{
+          display: 'flex',
+          margin: 'auto',
+          marginBottom: '2rem',
+          marginTop: '2rem',
+          fontSize: '1rem',
+        }} onClick={handleLogout}>
+          Wyloguj
+        </button>
+
+        <button
+          style={{
+            display: 'flex',
+            margin: 'auto',
+            marginBottom: '2rem',
+            marginTop: '2rem',
+            fontSize: '1rem',
+          }}
+          onClick={() => navigate("/profile")}
+        >
+          Mój Profil
+        </button>
+      </div>
+
 
 
       {/* Dodawanie nowego obrazka */}
@@ -123,6 +132,7 @@ export default function Home() {
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
           />
+
           <div style={{
             display: 'flex',
             width: '100%',
@@ -146,6 +156,7 @@ export default function Home() {
               }}>
               Anuluj
             </button>
+
           </div>
 
         </div>

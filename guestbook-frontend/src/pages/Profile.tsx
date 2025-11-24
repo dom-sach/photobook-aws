@@ -62,7 +62,7 @@ export default function Profile() {
     <div style={{ width: "60%", margin: "auto", marginTop: "2rem" }}>
       <h2>Mój Profil</h2>
 
-      <p><strong>Email:</strong> {email}</p>
+      <p><strong>Id:</strong> {email}</p>
 
       <label>Bio:</label>
       <textarea

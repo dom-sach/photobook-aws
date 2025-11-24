@@ -31,6 +31,7 @@ public class ImageService {
 
     private final ImageMetadataRepository repo;
 
+    // upload obrazu
     public ImageMetadata upload(MultipartFile file, String caption, String email) throws IOException {
         String filename = UUID.randomUUID() + "-" + file.getOriginalFilename();
         ObjectMetadata meta = new ObjectMetadata();
@@ -56,20 +57,16 @@ public class ImageService {
         return amazonS3.getUrl(bucket, filename).toString();
     }
 
-    /**
-     * Metoda do pobrania obrazu jako Resource, gotowa do wysłania w ResponseEntity.
-     */
+    // pobieranie obrazu
     public ResponseEntity<Resource> downloadImage(String filename) throws MalformedURLException {
-        // Tworzymy URL do obiektu w S3
         java.net.URL url = amazonS3.getUrl(bucket, filename);
+
         Resource resource = new UrlResource(url);
         if (!resource.exists() || !resource.isReadable()) {
             throw new RuntimeException("Nie można odczytać pliku");
         }
 
-        // Ustal ContentType
         String contentType = "application/octet-stream";
-
         return ResponseEntity.ok()
                 .header("Content-Disposition", "inline; filename=\"" + filename + "\"")
                 .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
