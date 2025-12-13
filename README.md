@@ -1,7 +1,7 @@
 [PWr] Simple web app project to be hosted on AWS services
 
-# Guestbook App 
-Guestbook App is a cloud-native web application deployed fully on AWS using modern serverless components.
+# Photobook Web App 
+Photobook App is a cloud-native web application deployed fully on AWS using modern serverless components.
 It allows users to:
 - register and log in (AWS Cognito),
 - upload images with captions (AWS S3),
